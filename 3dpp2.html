@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D打印服务智能报价系统 V1.1 - 网页版 & 下载分享</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#102b55',
+                        },
+                        coffee: {
+                            50: '#fffbeed6',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #f4f6fa;
+            --card: #ffffff;
+            --ink: #182230;
+            --muted: #687586;
+            --line: #e5eaf0;
+            --blue: #2563eb;
+            --green: #15803d;
+            --soft: #eff6ff;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+
+        /* Calculator Embedded Styles */
+        .calc-field label { display: block; color: #465365; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+        .calc-field input, .calc-field select { width: 100%; border: 1px solid #d6dee8; border-radius: 9px; padding: 9px 11px; font: inherit; background: #fff; color: var(--ink); outline: none; transition: all 0.15s ease; }
+        .calc-field input:focus, .calc-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+        .calc-radio { display: flex; gap: 9px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; transition: all 0.15s ease; }
+        .calc-radio:has(input:checked) { border-color: #93b4f8; background: var(--soft); }
+        .calc-tabs button.active { background: #fff; color: var(--blue); box-shadow: 0 1px 5px rgba(23, 43, 77, 0.12); }
+        .calc-line { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid #f0f2f5; font-size: 13.5px; }
+        .calc-line span:first-child { color: var(--muted); }
+        .customer .customer-only { display: flex; }
+        .customer .internal-only { display: none !important; }
+
+        .qr-gradient-border {
+            background: linear-gradient(135deg, #07c160, #10b981);
+            padding: 3px;
+            border-radius: 1rem;
+        }
+
+        @media print {
+            body { background: #fff; }
+            .no-print { display: none !important; }
+            .customer .internal-only { display: none !important; }
+            .customer .customer-only { display: flex !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Modal for Restoring Data -->
+    <div id="restoreDialog" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <div class="w-10 h-10 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center mb-3">
+                <i class="fa-solid fa-clock-rotate-left text-lg"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">发现上次保存的报价记录</h3>
+            <p id="savedInfo" class="text-xs text-slate-500 leading-relaxed mb-5">检测到浏览器中存有上次编辑的数据，是否立即恢复？</p>
+            <div class="flex gap-3">
+                <button class="flex-1 py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl text-sm transition-colors" id="restoreBtn" type="button">恢复上次报价</button>
+                <button class="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors" id="discardSavedBtn" type="button">放弃并重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 glass-card border-b border-slate-200/80 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-900 to-brand-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                    <i class="fa-solid fa-cube text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">3D打印服务智能报价系统</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">成本核算 · 客户报价单生成 · 本地离线版</p>
+                </div>
+                <span class="ml-2 px-2.5 py-0.5 text-xs font-semibold bg-brand-50 text-brand-600 border border-brand-100 rounded-full">V1.1</span>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <a href="#download-section" class="px-3.5 py-2 text-xs sm:text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors inline-flex items-center">
+                    <i class="fa-solid fa-download mr-1.5"></i> 本地下载
+                </a>
+                <a href="#donate-section" class="px-3.5 py-2 text-xs sm:text-sm font-medium text-white bg-gradient-to-r from-coffee-500 to-amber-600 hover:from-coffee-600 hover:to-amber-700 rounded-lg shadow-sm hover:shadow transition-all inline-flex items-center">
+                    <i class="fa-solid fa-mug-hot mr-1.5"></i> 支持作者
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8" id="app">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- LEFT MAIN COLUMN: Interactive Calculator & Detailed Documentation -->
+            <section class="lg:col-span-7 xl:col-span-8 space-y-6">
+                
+                <!-- Calculator Hero Header -->
+                <div class="bg-gradient-to-r from-brand-900 to-brand-600 rounded-2xl p-6 text-white shadow-lg shadow-brand-900/10">
+                    <div class="flex flex-wrap justify-between items-start gap-4">
+                        <div>
+                            <span class="inline-block px-2.5 py-1 text-[11px] font-semibold bg-white/10 backdrop-blur-md text-blue-100 border border-white/20 rounded-lg mb-3">
+                                网页纯前端运行 · 数据不上云
+                            </span>
+                            <h2 class="text-xl sm:text-2xl font-bold tracking-tight">3D打印服务智能报价系统 V1.1</h2>
+                            <p class="text-xs sm:text-sm text-blue-100 mt-1">支持：内部成本精细化核算 + 导出规范客户报价单</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Embedded Main Calculator Body -->
+                <div class="layout grid grid-cols-1 gap-6">
+                    
+                    <!-- Form Area -->
+                    <div class="form-area space-y-5">
+                        
+                        <!-- Step 1: Order Info -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center">
+                                <span class="w-6 h-6 rounded-md bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center mr-2">01</span>
+                                订单基本信息
+                            </h3>
+                            <div class="space-y-2.5">
+                                <label class="calc-radio">
+                                    <input type="radio" name="type" value="print" checked class="mt-1 accent-blue-600">
+                                    <div>
+                                        <div class="font-semibold text-sm text-slate-800">类型一：有模型，直接打印</div>
+                                        <div class="text-xs text-slate-500">客户提供3D模型文件，直接进行打印生产</div>
+                                    </div>
+                                </label>
+                                <label class="calc-radio">
+                                    <input type="radio" name="type" value="model" class="mt-1 accent-blue-600">
+                                    <div>
+                                        <div class="font-semibold text-sm text-slate-800">类型二：有图纸，需要建模</div>
+                                        <div class="text-xs text-slate-500">根据工程图、尺寸图或草图建立三维模型</div>
+                                    </div>
+                                </label>
+                                <label class="calc-radio">
+                                    <input type="radio" name="type" value="design" class="mt-1 accent-blue-600">
+                                    <div>
+                                        <div class="font-semibold text-sm text-slate-800">类型三：无模型无图纸，需要设计和建模</div>
+                                        <div class="text-xs text-slate-500">包含产品概念设计及三维建模</div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-3 border-t border-slate-100">
+                                <div class="calc-field">
+                                    <label>打印数量（件）</label>
+                                    <input id="qty" type="number" min="1" step="1" value="1">
+                                </div>
+                                <div class="calc-field">
+                                    <label>材料类型</label>
+                                    <select id="material">
+                                        <option>PLA</option>
+                                        <option>PETG</option>
+                                        <option>ABS</option>
+                                        <option>ASA</option>
+                                        <option>TPU</option>
+                                        <option>尼龙 PA</option>
+                                        <option>光敏树脂</option>
+                                        <option>其他材料</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Design & Modeling Fees -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm" id="designCard">
+                            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                <span class="flex items-center">
+                                    <span class="w-6 h-6 rounded-md bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center mr-2">02</span>
+                                    设计及建模费用
+                                </span>
+                                <span class="text-xs font-normal text-slate-400">一次性费用 / 每订单</span>
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="designFields">
+                                <div class="calc-field" id="designHoursField">
+                                    <label>产品设计工时（小时）</label>
+                                    <input id="designHours" type="number" min="0" step=".1" value="0">
+                                </div>
+                                <div class="calc-field" id="designRateField">
+                                    <label>设计小时费（元）</label>
+                                    <input id="designRate" type="number" min="0" step=".01" value="80">
+                                </div>
+                                <div class="calc-field" id="modelHoursField">
+                                    <label>建模工时（小时）</label>
+                                    <input id="modelHours" type="number" min="0" step=".1" value="0">
+                                </div>
+                                <div class="calc-field" id="modelRateField">
+                                    <label>建模小时费（元）</label>
+                                    <input id="modelRate" type="number" min="0" step=".01" value="60">
+                                </div>
+                                <div class="calc-field sm:col-span-2">
+                                    <label>文件检查及处理费（元/订单）</label>
+                                    <input id="fileFee" type="number" min="0" step=".01" value="0">
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-3"><i class="fa-solid fa-circle-info mr-1"></i>直接打印不收设计费；有图纸仅算建模费；无模型图纸则双向计费。</p>
+                        </div>
+
+                        <!-- Step 3: Print & Material Fees -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                <span class="flex items-center">
+                                    <span class="w-6 h-6 rounded-md bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center mr-2">03</span>
+                                    打印及耗材费用
+                                </span>
+                                <span class="text-xs font-normal text-slate-400">按单件数据计算</span>
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="calc-field">
+                                    <label>单件耗材重量（克）</label>
+                                    <input id="grams" type="number" min="0" step=".1" value="100">
+                                </div>
+                                <div class="calc-field">
+                                    <label>材料单价（元/公斤）</label>
+                                    <input id="priceKg" type="number" min="0" step=".01" value="80">
+                                </div>
+                                <div class="calc-field">
+                                    <label>耗材损耗率（%）</label>
+                                    <input id="waste" type="number" min="0" step=".1" value="10">
+                                </div>
+                                <div class="calc-field">
+                                    <label>单件打印时间（小时）</label>
+                                    <input id="hours" type="number" min="0" step=".1" value="3">
+                                </div>
+                                <div class="calc-field">
+                                    <label>设备小时费率（元）</label>
+                                    <input id="machineRate" type="number" min="0" step=".01" value="8">
+                                </div>
+                                <div class="calc-field">
+                                    <label>单件换色次数</label>
+                                    <input id="changes" type="number" min="0" step="1" value="0">
+                                </div>
+                                <div class="calc-field sm:col-span-2">
+                                    <label>单次换色费（元）</label>
+                                    <input id="changeRate" type="number" min="0" step=".01" value="1.5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Post-processing -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                <span class="flex items-center">
+                                    <span class="w-6 h-6 rounded-md bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center mr-2">04</span>
+                                    后处理及质量检验
+                                </span>
+                                <span class="text-xs font-normal text-slate-400">按单件计算</span>
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="calc-field">
+                                    <label>单件后处理工时（小时）</label>
+                                    <input id="postHours" type="number" min="0" step=".1" value="0">
+                                </div>
+                                <div class="calc-field">
+                                    <label>人工小时费（元）</label>
+                                    <input id="laborRate" type="number" min="0" step=".01" value="40">
+                                </div>
+                                <div class="calc-field">
+                                    <label>单件质检费（元）</label>
+                                    <input id="qc" type="number" min="0" step=".01" value="0">
+                                </div>
+                                <div class="calc-field">
+                                    <label>单件包装费（元）</label>
+                                    <input id="pack" type="number" min="0" step=".01" value="5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 5: Shipping -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+                                <span class="flex items-center">
+                                    <span class="w-6 h-6 rounded-md bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center mr-2">05</span>
+                                    物流及其他费用
+                                </span>
+                                <span class="text-xs font-normal text-slate-400">按订单计算</span>
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="calc-field">
+                                    <label>邮寄费用（元/订单）</label>
+                                    <input id="shipping" type="number" min="0" step=".01" value="12">
+                                </div>
+                                <div class="calc-field">
+                                    <label>其他费用（元/订单）</label>
+                                    <input id="misc" type="number" min="0" step=".01" value="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 6: Margin & Tax -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                            <h3 class="text-base font-bold text-slate-900 mb-4 flex items-center">
+                                <span class="w-6 h-6 rounded-md bg-brand-50 text-brand-600 text-xs font-bold flex items-center justify-center mr-2">06</span>
+                                利润、折扣及税费设置
+                            </h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="calc-field">
+                                    <label>目标毛利率（%）</label>
+                                    <input id="margin" type="number" min="0" max="90" step=".1" value="35">
+                                </div>
+                                <div class="calc-field">
+                                    <label>客户折扣（%）</label>
+                                    <input id="discount" type="number" min="0" max="100" step=".1" value="0">
+                                </div>
+                                <div class="calc-field">
+                                    <label>税率（%）</label>
+                                    <input id="tax" type="number" min="0" step=".1" value="0">
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-3 leading-relaxed">
+                                公式：目标售价 = 总成本 ÷（1 - 目标毛利率）。折扣在目标售价基础上扣除，税费按折后金额计算。
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Summary & Calculation Results Floating Panel -->
+                    <div class="summary space-y-5">
+                        <div class="bg-white rounded-2xl p-5 border-2 border-brand-500/30 shadow-lg sticky top-20">
+                            <h3 class="text-base font-bold text-slate-900 mb-3 flex items-center justify-between">
+                                <span><i class="fa-solid fa-calculator text-brand-600 mr-2"></i>实时报价计算结果</span>
+                            </h3>
+
+                            <!-- Views Switcher Tabs -->
+                            <div class="calc-tabs flex bg-slate-100 p-1 rounded-xl mb-4 text-xs font-semibold no-print">
+                                <button id="internalTab" class="flex-1 py-2 rounded-lg transition-all active" type="button">内部成本核算</button>
+                                <button id="customerTab" class="flex-1 py-2 rounded-lg transition-all" type="button">客户报价视图</button>
+                            </div>
+
+                            <!-- Internal Cost Breakdown -->
+                            <div id="internalView" class="space-y-1">
+                                <div class="calc-line"><span>设计及建模成本</span><b id="rDesign">¥0.00</b></div>
+                                <div class="calc-line"><span>文件处理成本</span><b id="rFile">¥0.00</b></div>
+                                <div class="calc-line"><span>耗材成本（含损耗）</span><b id="rMaterial">¥0.00</b></div>
+                                <div class="calc-line"><span>设备使用成本</span><b id="rMachine">¥0.00</b></div>
+                                <div class="calc-line"><span>多色换色成本</span><b id="rColor">¥0.00</b></div>
+                                <div class="calc-line"><span>后处理人工成本</span><b id="rPost">¥0.00</b></div>
+                                <div class="calc-line"><span>质检及包装成本</span><b id="rQcPack">¥0.00</b></div>
+                                <div class="calc-line"><span>邮寄及其他成本</span><b id="rShipMisc">¥0.00</b></div>
+                                <div class="calc-line pt-2 font-bold text-slate-900"><span>订单总成本</span><b id="rCost">¥0.00</b></div>
+                                <div class="calc-line"><span>折后报价（含税）</span><b id="rFinalInternal">¥0.00</b></div>
+                                <div class="calc-line text-emerald-600 font-bold"><span>预计利润</span><b class="text-lg" id="rProfit">¥0.00</b></div>
+                                <div class="calc-line"><span>实际利润率</span><b id="rMargin">0.00%</b></div>
+                                <div class="calc-line"><span>平均单件成本</span><b id="rUnitCost">¥0.00</b></div>
+                                
+                                <div class="bg-amber-50 text-amber-800 text-[11px] p-2.5 rounded-lg border border-amber-200/60 mt-3">
+                                    <i class="fa-solid fa-lock mr-1"></i> 内部视图仅供内部查看。对外报价时请切换至“客户报价视图”。
+                                </div>
+                            </div>
+
+                            <!-- Customer Presentation View -->
+                            <div id="customerView" class="hidden space-y-2">
+                                <div class="bg-gradient-to-br from-emerald-500 to-teal-700 text-white p-4 rounded-xl shadow-md text-center">
+                                    <div class="text-xs text-emerald-100 font-medium">订单最终报价 (CNY)</div>
+                                    <div class="text-3xl font-extrabold font-mono mt-1" id="cTotal">¥0.00</div>
+                                </div>
+
+                                <div class="calc-line"><span>设计建模服务</span><b id="cDesign">¥0.00</b></div>
+                                <div class="calc-line"><span>打印及生产服务</span><b id="cProduction">¥0.00</b></div>
+                                <div class="calc-line"><span>后处理及质检</span><b id="cPost">¥0.00</b></div>
+                                <div class="calc-line"><span>包装及物流</span><b id="cPackShip">¥0.00</b></div>
+                                <div class="calc-line"><span>其他服务</span><b id="cMisc">¥0.00</b></div>
+                                <div class="calc-line text-rose-600"><span>优惠金额</span><b id="cDiscount">-¥0.00</b></div>
+                                <div class="calc-line"><span>税费</span><b id="cTax">¥0.00</b></div>
+                                <div class="calc-line font-bold"><span>订单数量</span><b id="cQty">1 件</b></div>
+                                <div class="calc-line font-bold text-brand-600"><span>平均含税单价</span><b id="cUnit">¥0.00</b></div>
+
+                                <p class="text-[11px] text-slate-400 mt-2 text-center">
+                                    已隐藏敏感成本与利润明细，可直接打印或截图给客户。
+                                </p>
+                            </div>
+
+                            <!-- Action Buttons Bar -->
+                            <div class="grid grid-cols-2 gap-2 mt-4 no-print">
+                                <button class="py-2 px-3 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm" id="saveBtn" type="button">
+                                    <i class="fa-solid fa-floppy-disk mr-1"></i> 保存本次报价
+                                </button>
+                                <button class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all" id="copyBtn" type="button">
+                                    <i class="fa-solid fa-copy mr-1"></i> 复制报价摘要
+                                </button>
+                                <button class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all" id="printBtn" type="button">
+                                    <i class="fa-solid fa-print mr-1"></i> 打印 / 导出PDF
+                                </button>
+                                <button class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all" id="resetBtn" type="button">
+                                    <i class="fa-solid fa-rotate-left mr-1"></i> 恢复默认
+                                </button>
+                            </div>
+                            
+                            <div class="text-[11px] text-slate-400 mt-3 pt-2 border-t border-slate-100 no-print" id="saveStatus">
+                                当前状态：<strong>尚未保存</strong>。保存内容仅存于本地浏览器。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- RIGHT SIDEBAR: Local Download Link & Buy Me a Coffee Support -->
+            <aside class="lg:col-span-5 xl:col-span-4 space-y-6">
+                
+                <!-- TOP RIGHT: Local Download Card -->
+                <div id="download-section" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                                <i class="fa-solid fa-file-arrow-down text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">本地离线版下载</h3>
+                                <p class="text-xs text-slate-400">完整源代码打包 · 零依赖</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold px-2 py-0.5 rounded-full">v1.1 最新版</span>
+                    </div>
+
+                    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+                        点击下方链接可将本项目完整源代码（打包为 ZIP 文件）保存到本地电脑。无上传风险，离线双击即可打开使用。
+                    </p>
+
+                    <!-- Direct Github Download Link -->
+                    <div class="space-y-2.5">
+                        <a href="https://github.com/frankzhou66/3DPS/archive/refs/heads/main.zip" target="_blank" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center text-sm group">
+                            <i class="fa-solid fa-download mr-2 group-hover:bounce"></i> 下载本地离线源码包 (.zip)
+                        </a>
+                        <button onclick="copyDownloadUrl()" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl transition-colors text-xs flex items-center justify-center">
+                            <i class="fa-regular fa-copy mr-1.5"></i> <span id="dl-copy-text">复制离线包下载链接</span>
+                        </button>
+                    </div>
+
+                    <!-- Technical specs list -->
+                    <div class="mt-5 pt-3.5 border-t border-slate-100 space-y-1.5 text-xs text-slate-500">
+                        <div class="flex items-center"><i class="fa-solid fa-check text-emerald-500 mr-2 text-[10px]"></i> 文件大小：极简单文件 / 压缩包小于 1MB</div>
+                        <div class="flex items-center"><i class="fa-solid fa-check text-emerald-500 mr-2 text-[10px]"></i> 兼容系统：Windows, macOS, Linux, iOS, Android</div>
+                        <div class="flex items-center"><i class="fa-solid fa-check text-emerald-500 mr-2 text-[10px]"></i> 使用方式：解压后双击 `index.html` 即可运行</div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM RIGHT: Support / Buy Me a Coffee Card -->
+                <div id="donate-section" class="bg-gradient-to-b from-amber-50/70 via-white to-white rounded-2xl p-6 shadow-sm border border-amber-200/80">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-coffee-600 text-white flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-mug-hot text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">支持我，请我喝一杯咖啡吧💰</h3>
+                            <p class="text-xs text-slate-500">开源维护不易，您的鼓励是持续更新的动力</p>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+                        如果这个报价计算器帮助您节省了时间或提升了接单效率，欢迎扫码请作者喝一杯咖啡☕！
+                    </p>
+
+                    <!-- Amount Tabs -->
+                    <div class="mb-4">
+                        <div class="grid grid-cols-4 gap-2">
+                            <button onclick="selectAmount(2)" id="btn-2" class="amount-btn py-2 px-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-slate-800 hover:border-amber-500 transition-all flex flex-col items-center justify-center">
+                                <span>2 元</span>
+                                <span class="text-[9px] font-normal text-slate-400">☕</span>
+                            </button>
+                            <button onclick="selectAmount(5)" id="btn-5" class="amount-btn py-2 px-1 text-xs font-bold rounded-lg border-2 border-amber-500 bg-amber-500 text-white shadow-sm transition-all flex flex-col items-center justify-center">
+                                <span>5 元</span>
+                                <span class="text-[9px] font-normal text-amber-100">☕☕</span>
+                            </button>
+                            <button onclick="selectAmount(8)" id="btn-8" class="amount-btn py-2 px-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-slate-800 hover:border-amber-500 transition-all flex flex-col items-center justify-center">
+                                <span>8 元</span>
+                                <span class="text-[9px] font-normal text-slate-400">☕☕☕</span>
+                            </button>
+                            <button onclick="selectAmount('custom')" id="btn-custom" class="amount-btn py-2 px-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-slate-800 hover:border-amber-500 transition-all flex flex-col items-center justify-center">
+                                <span>随意</span>
+                                <span class="text-[9px] font-normal text-slate-400">❤️❤️❤️</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- WeChat Payment QR Code Area -->
+                    <div class="bg-white p-4 rounded-xl border border-amber-200/80 shadow-inner flex flex-col items-center justify-center">
+                        
+                        <div class="flex items-center space-x-1.5 mb-3 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                            <i class="fa-brands fa-weixin text-sm"></i>
+                            <span>微信扫码赞赏 <strong id="qr-amount-text" class="text-emerald-700 ml-0.5">5元</strong></span>
+                        </div>
+
+                        <!-- Provided WeChat Pay QR Image Container -->
+                        <div class="qr-gradient-border relative">
+                            <div class="bg-white p-2 rounded-[0.85rem] overflow-hidden flex items-center justify-center w-48 h-48 sm:w-52 sm:h-52">
+                                <img id="qr-image" src="5y.png" alt="微信赞赏收款码" class="w-full h-full object-contain rounded-lg">
+                            </div>
+                        </div>
+
+                        <div class="mt-3 text-[11px] text-slate-400 flex items-center space-x-1">
+                            <i class="fa-solid fa-qrcode"></i>
+                            <span>微信“扫一扫”或截图保存后识别</span>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+        </div>
+    </main>
+
+    <!-- Global Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2 z-50">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">操作成功</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-200 bg-white mt-12 py-6 text-xs text-slate-500 text-center no-print">
+        <div class="max-w-7xl mx-auto px-4 space-y-1.5">
+            <p>3D打印服务智能报价系统 V1.1 · 本地浏览器独立运行 · 数据不上云</p>
+            <p class="text-slate-400">© 2026 保留所有权利 · 专为 3D 打印创客与工作室打造</p>
+        </div>
+    </footer>
+
+    <!-- Integrated Calculator Logic Scripts -->
+    <script>
+        // ----------------------------------------------------
+        // 1. Core Calculator Logic (Preserving V1.1 Functionality)
+        // ----------------------------------------------------
+        const $ = id => document.getElementById(id);
+        const ids = ['qty','material','designHours','designRate','modelHours','modelRate','fileFee','grams','priceKg','waste','hours','machineRate','changes','changeRate','postHours','laborRate','qc','pack','shipping','misc','margin','discount','tax'];
+        const defaults = {qty:1,material:'PLA',designHours:0,designRate:80,modelHours:0,modelRate:60,fileFee:0,grams:100,priceKg:80,waste:10,hours:3,machineRate:8,changes:0,changeRate:1.5,postHours:0,laborRate:40,qc:0,pack:5,shipping:12,misc:0,margin:35,discount:0,tax:0};
+        let currentView = 'internal';
+
+        const num = id => Math.max(0, Number($(id).value) || 0);
+        const money = x => '¥' + (Number.isFinite(x) ? x : 0).toFixed(2);
+        const type = () => document.querySelector('input[name="type"]:checked').value;
+
+        function updateType() {
+            const t = type();
+            $('designCard').classList.toggle('hidden', t === 'print');
+            $('designHoursField').classList.toggle('hidden', t !== 'design');
+            $('designRateField').classList.toggle('hidden', t !== 'design');
+        }
+
+        function calculate() {
+            updateType();
+            const q = Math.max(1, Math.floor(num('qty')));
+            const t = type();
+            const designCost = (t === 'design' ? num('designHours') * num('designRate') : 0) + (t !== 'print' ? num('modelHours') * num('modelRate') : 0);
+            const fileCost = t === 'print' ? 0 : num('fileFee');
+            const material = num('grams') * num('priceKg') / 1000 * (1 + num('waste') / 100);
+            const machine = num('hours') * num('machineRate');
+            const color = num('changes') * num('changeRate');
+            const post = num('postHours') * num('laborRate');
+            const qc = num('qc'), pack = num('pack'), ship = num('shipping'), misc = num('misc');
+            const production = material + machine + color + post + qc + pack;
+            const cost = designCost + fileCost + production * q + ship + misc;
+            const margin = Math.min(90, num('margin')) / 100;
+            const gross = cost / (1 - margin);
+            const discount = gross * Math.min(100, num('discount')) / 100;
+            const afterDiscount = gross - discount;
+            const tax = afterDiscount * num('tax') / 100;
+            const final = afterDiscount + tax;
+            const profit = final - cost;
+            const actual = final > 0 ? profit / final * 100 : 0;
+
+            const put = (id, val) => $(id).textContent = val;
+            put('rDesign', money(designCost));
+            put('rFile', money(fileCost));
+            put('rMaterial', money(material * q));
+            put('rMachine', money(machine * q));
+            put('rColor', money(color * q));
+            put('rPost', money(post * q));
+            put('rQcPack', money((qc + pack) * q));
+            put('rShipMisc', money(ship + misc));
+            put('rCost', money(cost));
+            put('rFinalInternal', money(final));
+            put('rProfit', money(profit));
+            put('rMargin', actual.toFixed(2) + '%');
+            put('rUnitCost', money(cost / q));
+
+            put('cTotal', money(final));
+            put('cDesign', money(designCost + fileCost));
+            put('cProduction', money((material + machine + color) * q));
+            put('cPost', money((post + qc) * q));
+            put('cPackShip', money(pack * q + ship));
+            put('cMisc', money(misc));
+            put('cDiscount', '-' + money(discount));
+            put('cTax', money(tax));
+            put('cQty', q + ' 件');
+            put('cUnit', money(final / q));
+
+            window.quoteData = {q, t, designCost, fileCost, material, machine, color, post, qc, pack, ship, misc, cost, gross, discount, tax, final, profit, actual};
+        }
+
+        function setView(v) {
+            currentView = v;
+            $('internalView').classList.toggle('hidden', v !== 'internal');
+            $('customerView').classList.toggle('hidden', v !== 'customer');
+            $('internalTab').classList.toggle('active', v === 'internal');
+            $('customerTab').classList.toggle('active', v === 'customer');
+            $('app').classList.toggle('customer', v === 'customer');
+        }
+
+        // Add event listeners to input fields
+        ids.forEach(id => $(id).addEventListener('input', calculate));
+        document.querySelectorAll('input[name="type"]').forEach(el => el.addEventListener('change', calculate));
+        
+        $('internalTab').onclick = () => setView('internal');
+        $('customerTab').onclick = () => setView('customer');
+        
+        $('resetBtn').onclick = () => {
+            ids.forEach(id => { if (defaults[id] !== undefined) $(id).value = defaults[id]; });
+            document.querySelector('input[name="type"][value="print"]').checked = true;
+            calculate();
+            setView('internal');
+            showToast('已恢复至默认设置');
+        };
+
+        $('printBtn').onclick = () => {
+            if (currentView !== 'customer') { setView('customer'); }
+            window.print();
+        };
+
+        $('copyBtn').onclick = async () => {
+            const d = window.quoteData;
+            const title = '【3D打印服务报价摘要】';
+            const text = [
+                title,
+                '业务类型：' + ({print:'有模型直接打印', model:'有图纸需要建模', design:'无模型无图纸，需要设计建模'}[d.t]),
+                '耗材种类：' + $('material').value,
+                '打印数量：' + d.q + '件',
+                '订单总成本：' + money(d.cost),
+                '客户最终报价：' + money(d.final),
+                '平均单件报价：' + money(d.final / d.q)
+            ].join('\n');
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('报价摘要已成功复制！');
+            } catch (e) {
+                prompt('复制以下报价摘要：', text);
+            }
+        };
+
+        // Local Storage & Persistence Logic
+        const SAVE_KEY = '3d_print_quote_v11_local_save';
+        let isDirty = false;
+
+        function setSaveStatus(message, saved = false) {
+            $('saveStatus').innerHTML = '当前状态：<strong>' + message + '</strong>。保存内容仅存于本地浏览器。';
+            $('saveStatus').style.color = saved ? '#15803d' : '#687586';
+        }
+
+        function markDirty() {
+            isDirty = true;
+            setSaveStatus('有未保存的修改');
+        }
+
+        function snapshot() {
+            const values = {};
+            ids.forEach(id => values[id] = $(id).value);
+            return {
+                version: 1.1,
+                savedAt: new Date().toISOString(),
+                values,
+                type: type(),
+                view: currentView
+            };
+        }
+
+        function saveQuote() {
+            try {
+                const data = snapshot();
+                localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+                isDirty = false;
+                setSaveStatus('已保存（' + new Date(data.savedAt).toLocaleString() + '）', true);
+                showToast('报价方案已成功保存到本地');
+            } catch (e) {
+                alert('保存失败：浏览器可能禁用了本地存储。');
+            }
+        }
+
+        function restoreQuote(data) {
+            if (!data || !data.values) return;
+            ids.forEach(id => {
+                if (data.values[id] !== undefined) $(id).value = data.values[id];
+            });
+            const radio = document.querySelector('input[name="type"][value="' + data.type + '"]');
+            if (radio) radio.checked = true;
+            calculate();
+            setView(data.view === 'customer' ? 'customer' : 'internal');
+            isDirty = false;
+            setSaveStatus('已恢复上次保存（' + new Date(data.savedAt).toLocaleString() + '）', true);
+        }
+
+        ids.forEach(id => $(id).addEventListener('input', markDirty));
+        document.querySelectorAll('input[name="type"]').forEach(el => el.addEventListener('change', markDirty));
+        $('saveBtn').addEventListener('click', saveQuote);
+
+        window.addEventListener('beforeunload', e => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // ----------------------------------------------------
+        // 2. Auxiliary Page Interactions & Toast Messaging
+        // ----------------------------------------------------
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            toastMsg.innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function copyDownloadUrl() {
+            const dlUrl = "https://github.com/frankzhou66/3DPS/archive/refs/heads/main.zip";
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = dlUrl;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            const copyBtnText = document.getElementById('dl-copy-text');
+            copyBtnText.innerText = '链接已复制！';
+            showToast('离线包下载链接已复制到剪贴板');
+            setTimeout(() => {
+                copyBtnText.innerText = '复制离线包下载链接';
+            }, 2500);
+        }
+
+        function selectAmount(amount) {
+            const buttons = document.querySelectorAll('.amount-btn');
+            buttons.forEach(btn => {
+                btn.className = "amount-btn py-2 px-1 text-xs font-bold rounded-lg border border-amber-300 bg-white text-slate-800 hover:border-amber-500 transition-all flex flex-col items-center justify-center";
+                const sub = btn.querySelectorAll('span')[1];
+                if(sub) sub.className = "text-[9px] font-normal text-slate-400";
+            });
+
+            const activeBtn = document.getElementById(`btn-${amount}`);
+            if (activeBtn) {
+                activeBtn.className = "amount-btn py-2 px-1 text-xs font-bold rounded-lg border-2 border-amber-500 bg-amber-500 text-white shadow-sm transition-all flex flex-col items-center justify-center scale-105";
+                const sub = activeBtn.querySelectorAll('span')[1];
+                if(sub) sub.className = "text-[9px] font-normal text-amber-100";
+            }
+
+            const qrText = document.getElementById('qr-amount-text');
+            const qrImg = document.getElementById('qr-image');
+
+            if (amount === 'custom') {
+                qrText.innerText = '任意金额';
+                qrImg.src = 'ry.png';
+            } else {
+                qrText.innerText = `${amount}元`;
+                qrImg.src = `${amount}y.png`;
+            }
+        }
+
+        // Initialize Application
+        window.onload = function() {
+            // Check for saved data in LocalStorage
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    $('savedInfo').textContent = '上次保存时间：' + new Date(data.savedAt).toLocaleString() + '。您可以恢复这份报价，或放弃并重新开始。';
+                    $('restoreDialog').classList.remove('hidden');
+                    $('restoreBtn').onclick = () => {
+                        restoreQuote(data);
+                        $('restoreDialog').classList.add('hidden');
+                    };
+                    $('discardSavedBtn').onclick = () => {
+                        localStorage.removeItem(SAVE_KEY);
+                        $('restoreDialog').classList.add('hidden');
+                        isDirty = false;
+                        setSaveStatus('已放弃旧报价，可开始新报价');
+                    };
+                }
+            } catch(e) {
+                setSaveStatus('无法读取本地保存记录');
+            }
+
+            calculate();
+        };
+    </script>
+</body>
+</html>
